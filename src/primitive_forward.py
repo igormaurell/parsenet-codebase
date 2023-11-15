@@ -786,6 +786,9 @@ class Fit:
         # U, s, V = torch.svd(weights * normals)
         weighted_normals = weights * normals
 
+        #print(np.max(points.cpu().numpy(), axis=0) - np.min(points.cpu().numpy(), axis=0))
+
+        #print(np.linalg.cond(weighted_normals.data.cpu().numpy()))
         if np.linalg.cond(weighted_normals.data.cpu().numpy()) > 1e5:
             if show_warning:
                 print("condition number is large in cylinder")
@@ -803,6 +806,7 @@ class Fit:
 
         # torch doesn't have least square for
         center, radius = self.fit_sphere_torch(prj_circle, normals, weights)
+
         return a, center, radius
 
     def fit_cone_torch(self, points, normals, weights, ids=0, show_warning=False):
@@ -948,6 +952,8 @@ def fit_one_shape_torch(data, fitter, weights, bw, eval=False, sample_points=Fal
 
         else:
             weight = weights[segment_indices, part_index:part_index + 1] + EPS
+
+        #print(weight.shape, torch.unique(weight))
 
         if not eval:
             # in the training mode, only process upto 5 splines

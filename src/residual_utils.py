@@ -59,11 +59,11 @@ class Evaluation:
         self.res_loss = ResidualLoss()
         self.fitter = FittingModule(closed_path, open_path)
 
-        for param in self.fitter.closed_control_decoder.parameters():
-            param.requires_grad = False
+        # for param in self.fitter.closed_control_decoder.parameters():
+        #     param.requires_grad = False
 
-        for param in self.fitter.open_control_decoder.parameters():
-            param.requires_grad = False
+        # for param in self.fitter.open_control_decoder.parameters():
+        #     param.requires_grad = False
         self.ms = MeanShift()
 
     def guard_mean_shift(self, embedding, quantile, iterations, kernel_type="gaussian"):
@@ -235,17 +235,19 @@ class Evaluation:
         weights = (
             to_one_hot(cluster_ids,
                        np.unique(cluster_ids).shape[0], device_id=weights.get_device()).data.cpu().numpy().T)
-
+        
         rows, cols, unique_target, unique_pred = match(labels, cluster_ids)
+
         gt_indices = []
         pred_indices = []
         data = []
         all_segments = []
-
+   
         for index, i in enumerate(unique_pred):
             # TODO some labels might be missing from unique_pred
             gt_indices_i = labels == cols[index]
             pred_indices_i = cluster_ids == i
+
 
             if if_visualize:
                 if (np.sum(gt_indices_i) == 0) and (np.sum(pred_indices_i) == 0):
@@ -253,8 +255,10 @@ class Evaluation:
                 elif (np.sum(gt_indices_i) > 0) and (np.sum(pred_indices_i) == 0):
                     continue
             else:
-                if (np.sum(gt_indices_i) == 0) or (np.sum(pred_indices_i) == 0):
+                if (np.sum(gt_indices_i) == 0) or (np.sum(pred_indices_i) == 0) or cols[index]==0:
                     continue
+            
+            #print(cols[index], np.count_nonzero(pred_indices_i), np.count_nonzero(gt_indices_i))
 
             l = stats.mode(pred_primitives[pred_indices_i])[0]
 

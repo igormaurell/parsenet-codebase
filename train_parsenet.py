@@ -43,7 +43,7 @@ logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter("%(asctime)s:%(name)s:%(message)s")
 file_handler = logging.FileHandler(
-    "logs/logs/{}.log".format(model_name), mode="w"
+    "logs/{}.log".format(model_name), mode="w"
 )
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
@@ -59,7 +59,7 @@ destination_file = "logs/scripts/{}_{}".format(
 )
 copyfile(source_file, destination_file)
 if_normals = config.normals
-if_normal_noise = True
+if_normal_noise = False
 
 Loss = EmbeddingLoss(margin=1.0, if_mean_shift=False)
 if config.mode == 0:
@@ -100,12 +100,13 @@ dataset = Dataset(
     config.num_test,
     primitives=True,
     normals=True,
+    prefix="/home2/aeroscan_datasets/parsenet/ls3dc_pccs_an/"
 )
 
 get_train_data = dataset.get_train(
-    randomize=True, augment=True, align_canonical=True, anisotropic=False, if_normal_noise=if_normal_noise
+    randomize=True, augment=True, align_canonical=False, anisotropic=False, if_normal_noise=if_normal_noise
 )
-get_val_data = dataset.get_val(align_canonical=True, anisotropic=False, if_normal_noise=if_normal_noise)
+get_val_data = dataset.get_val(align_canonical=False, anisotropic=False, if_normal_noise=if_normal_noise)
 optimizer = optim.Adam(model.parameters(), lr=config.lr)
 
 loader = generator_iter(get_train_data, int(1e10))
@@ -157,7 +158,7 @@ for e in range(config.epochs):
         torch.cuda.empty_cache()
         for _ in range(num_iter):
             points, labels, normals, primitives = next(get_train_data)[0]
-            l = np.arange(10000)
+            l = np.arange(7000)
             np.random.shuffle(l)
             # randomly sub-sampling points to increase robustness to density and
             # saving gpu memory
@@ -221,7 +222,7 @@ for e in range(config.epochs):
 
     for val_b_id in range(config.num_test // config.batch_size - 1):
         points, labels, normals, primitives = next(get_val_data)[0]
-        l = np.arange(10000)
+        l = np.arange(7000)
         np.random.shuffle(l)
         l = l[0:7000]
         points = points[:, l]

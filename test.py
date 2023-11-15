@@ -19,10 +19,11 @@ from src.primitives import SaveParameters
 from src.dataset_segments import Dataset
 from src.residual_utils import Evaluation
 import sys
+from tqdm import tqdm
 
 start = int(sys.argv[1])
 end = int(sys.argv[2])
-prefix = ""
+prefix = "/home2/aeroscan_datasets/parsenet/ls3dc_noisy/"
 
 dataset = Dataset(
     1,
@@ -59,14 +60,15 @@ with h5py.File(root_path, "r") as hf:
     # N x 1
     test_primitives = np.array(hf.get("prim"))
 
-method_name = "parsenet_with_normals.pth"
+method_name = "temp_12_lr_0.01_trsz_24000_tsz_4000_wght_100.0_mode_5.pth"
 
 root_path = prefix + "logs/results/{}/results/predictions.h5".format(method_name)
-print(root_path)
 with h5py.File(root_path, "r") as hf:
     print(list(hf.keys()))
-    test_cluster_ids = np.array(hf.get("seg_id")).astype(np.int32)
-    test_pred_primitives = np.array(hf.get("pred_primitives"))
+    points_query = np.array(hf.get("points"))
+    normals_query = np.array(hf.get("normals"))
+    test_cluster_ids = np.array(hf.get("labels")).astype(np.int32)
+    test_pred_primitives = np.array(hf.get("prim"))
 
 prim_ids = {}
 prim_ids[11] = "torus"
@@ -105,25 +107,28 @@ s_ks = []
 p_ks = []
 test_cds = []
 
-for i in range(start, end):
+for i in tqdm(range(start, end)):
     bw = 0.01
+
     points = test_points[i].astype(np.float32)
+    
     normals = test_normals[i].astype(np.float32)
 
     labels = test_labels[i].astype(np.int32)
     labels = continuous_labels(labels)
 
     cluster_ids = test_cluster_ids[i].astype(np.int32)
+
     cluster_ids = continuous_labels(cluster_ids)
     weights = to_one_hot(cluster_ids, np.unique(cluster_ids).shape[0])
 
-    points, normals = dataset.normalize_points(points, normals)
+    #points, normals = dataset.normalize_points(points, normals)
     torch.cuda.empty_cache()
     with torch.no_grad():
         # if_visualize=True, will give you all segments
         # if_sample=True will return segments as trimmed meshes
         # if_optimize=True will optimize the spline surface patches
-        _, parameters, newer_pred_mesh = evaluation.residual_eval_mode(
+        residual_loss, parameters, newer_pred_mesh = evaluation.residual_eval_mode(
             torch.from_numpy(points).cuda(),
             torch.from_numpy(normals).cuda(),
             labels,
@@ -134,9 +139,9 @@ for i in range(start, end):
             bw,
             sample_points=True,
             if_optimize=False,
-            if_visualize=True,
+            if_visualize=False,
             epsilon=0.1)
-
+                
     torch.cuda.empty_cache()
     s_iou, p_iou, _, _ = SIOU_matched_segments(
         labels,
@@ -148,6 +153,7 @@ for i in range(start, end):
 
     test_s_iou.append(s_iou)
     test_p_iou.append(p_iou)
+    test_res.append(residual_loss[1])
 
     try:
         Points = sample_from_collection_of_mesh(newer_pred_mesh)
@@ -177,7 +183,11 @@ for i in range(start, end):
                "p_iou": p_iou,
                "s_iou": s_iou}
 
-    print(i, s_iou, p_iou, test_cds[-1])
+    #print(i, s_iou, p_iou, test_cds[-1])#, residual_loss[1])
 
 print("Test CD: {}, Test p cover: {}, Test s cover: {}".format(np.mean(test_cds), np.mean(s_ks), np.mean(p_ks)))
-print("iou seg: {}, iou prim type: {}".format(np.mean(test_s_iou), np.mean(test_p_iou)))
+test_res2 = []
+for l in test_res:
+    if l is not None:
+        test_res2.append(l)
+print("iou seg: {}, iou prim type: {}, res: {}".format(np.mean(test_s_iou), np.mean(test_p_iou), np.mean(test_res2)))

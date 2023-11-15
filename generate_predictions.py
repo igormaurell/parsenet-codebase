@@ -35,13 +35,14 @@ from src.segment_utils import SIOU_matched_segments
 from src.residual_utils import Evaluation
 import time
 from src.primitives import SaveParameters
+from tqdm import tqdm
 
 # Use only one gpu.
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 config = Config(sys.argv[1])
 if_normals = config.normals
 
-userspace = ""
+userspace = "/home2/aeroscan_datasets/parsenet/ls3dc_pccs_an/"
 Loss = EmbeddingLoss(margin=1.0)
 
 if config.mode == 0:
@@ -70,7 +71,7 @@ elif config.mode == 5:
 saveparameters = SaveParameters()
 
 model_bkp = model
-model_bkp.l_permute = np.arange(10000)
+model_bkp.l_permute = np.arange(7000)
 model = torch.nn.DataParallel(model, device_ids=[0])
 model.cuda()
 
@@ -88,7 +89,7 @@ dataset = Dataset(
     prefix=userspace
 )
 
-get_test_data = dataset.get_test(align_canonical=True, anisotropic=False, if_normal_noise=True)
+get_test_data = dataset.get_test(align_canonical=False, anisotropic=False, if_normal_noise=False)
 
 loader = generator_iter(get_test_data, int(1e10))
 get_test_data = iter(
@@ -112,18 +113,22 @@ iterations = 50
 quantile = 0.015
 
 model.load_state_dict(
-    torch.load(userspace + "logs/pretrained_models/" + config.pretrain_model_path)
+    torch.load("./logs/trained_models/" + config.pretrain_model_path)
 )
 test_res = []
 test_s_iou = []
 test_p_iou = []
 test_g_res = []
 test_s_res = []
+PredictedPoints = []
+PredictedNormals = []
 PredictedLabels = []
 PredictedPrims = []
 
-for val_b_id in range(config.num_test // config.batch_size - 1):
+for val_b_id in tqdm(range(config.num_test // config.batch_size)):
     points_, labels, normals, primitives_ = next(get_test_data)[0]
+    PredictedPoints.append(points_)
+    PredictedNormals.append(normals)
     points = Variable(torch.from_numpy(points_.astype(np.float32))).cuda()
     normals = torch.from_numpy(normals).cuda()
 
@@ -147,19 +152,21 @@ for val_b_id in range(config.num_test // config.batch_size - 1):
         0])
     cluster_ids = cluster_ids.data.cpu().numpy()
 
-    s_iou, p_iou, _, _ = SIOU_matched_segments(
-        labels[0],
-        cluster_ids,
-        pred_primitives,
-        primitives_[0],
-        weights,
-    )
+    # s_iou, p_iou, _, _ = SIOU_matched_segments(
+    #     labels[0],
+    #     cluster_ids,
+    #     pred_primitives,
+    #     primitives_[0],
+    #     weights,
+    # )
     # print(s_iou, p_iou)
     PredictedLabels.append(cluster_ids)
     PredictedPrims.append(pred_primitives)
-    if val_b_id == 3:
-        break
 
-with h5py.File(userspace + "logs/results/{}/results/".format(config.pretrain_model_path) + "predictions.h5", "w") as hf:
-    hf.create_dataset(name="seg_id", data=np.stack(PredictedLabels, 0))
-    hf.create_dataset(name="pred_primitives", data=np.stack(PredictedPrims, 0))
+path = userspace + "logs/results/{}/results/".format(config.pretrain_model_path) + "predictions.h5"
+print(path)
+with h5py.File(path, "w") as hf:
+    hf.create_dataset(name="points", data=np.squeeze(np.stack(PredictedPoints, 0)))
+    hf.create_dataset(name="normals", data=np.squeeze(np.stack(PredictedNormals, 0)))
+    hf.create_dataset(name="labels", data=np.stack(PredictedLabels, 0))
+    hf.create_dataset(name="prim", data=np.stack(PredictedPrims, 0))

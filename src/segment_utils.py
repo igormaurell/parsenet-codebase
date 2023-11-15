@@ -173,6 +173,10 @@ def SIOU_matched_segments(target, pred_labels, primitives_pred, primitives, weig
         rids, cids = solve_dense(cost_[b])
         matching.append([rids, cids])
 
+    # matching_p = np.zeros(max(0, np.max(pred_labels) + 1), dtype=np.int32) - 1
+    # if len(rids) > 0:
+    #     matching_p[rids] = cids
+    
     primitives_pred_hot = to_one_hot(primitives_pred, 10, weights.device.index).float()
 
     # this gives you what primitive type the predicted segment has.

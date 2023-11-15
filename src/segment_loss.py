@@ -149,4 +149,8 @@ def evaluate_miou(gt_labels, pred_labels):
 
 
 def primitive_loss(pred, gt):
+    valid_class = (gt != -1)  # remove background
+    gt = gt[valid_class]
+    pred = pred.permute(0, 2, 1)[valid_class]
+
     return nllloss(pred, gt)

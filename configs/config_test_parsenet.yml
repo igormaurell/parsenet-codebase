@@ -10,17 +10,17 @@ dataset = ""
 preload_model = False
 
 # model name to load for testing the performance of parsenet.
-pretrain_model_path = "parsenet_without_normals.pth"
+pretrain_model_path = "temp_12_lr_0.01_trsz_24000_tsz_4000_wght_100.0_mode_5.pth"
 
 # Whether to input the normals or not
-normals = False
+normals = True
 
 proportion = 1.0
 
 # number of training instance
 num_train=24000
 num_val=4000
-num_test=4000
+num_test=2753
 num_points=1000
 loss_weight=100
 
@@ -54,4 +54,4 @@ lr_sch = True
 # Number of epochs to wait before decaying the learning rate.
 patience = 8
 
-mode = 0
+mode = 5

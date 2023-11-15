@@ -40,6 +40,7 @@ class ResidualLoss:
                 # degenerate case of primitives that are small
                 continue
             dist = self.routines[v[0]](points=Points[k], params=v[1:], sqrt=sqrt)
+            #print(len(Points[k]), np.max(Points[k].cpu().numpy()), v[0], list(v[1:][1].cpu().numpy()), dist)
             distances[k] = [v[0], dist]
         return distances
 
@@ -132,10 +133,13 @@ class ComputePrimitiveDistance:
         :param points: N x 3
         :param params: axis: 3 x 1, center: 1 x 3, radius \in R
         """
+
         # axis: 3 x 1, center: 1 x 3
         axis, center, radius = params
         center = center.reshape((1, 3))
         axis = axis.reshape((3, 1))
+
+        #print(len(points), center)
 
         v = points - center
         prj = (v @ axis) ** 2
@@ -148,6 +152,8 @@ class ComputePrimitiveDistance:
         distance = torch.sqrt(dist_from_surface) - radius
         # distance.register_hook(self.print_norm)
         distance = distance ** 2
+
+        length = len(distance)
 
         if sqrt:
             distance = guard_sqrt(distance)

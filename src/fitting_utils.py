@@ -358,8 +358,63 @@ def SIOU(target, pred_labels):
     s_iou = matching_iou(matching, np.expand_dims(pred_labels, 0), np.expand_dims(target, 0))
     return s_iou
 
+def getOneHot(a, n_classes=None):
+    if n_classes is None:
+        n_classes = a.max() + 1
+    b = np.zeros((a.size, n_classes), np.int8)
+    valid_mask = a > -1
+    b[valid_mask, a[valid_mask]] = 1
+    return b
+
+# def match(gt_labels, query_labels):
+#     gt_labels = gt_labels - 1
+#     W_pred = getOneHot(query_labels)
+#     valid_pred_indices = np.any(W_pred!=0, axis=1)
+#     W_gt = getOneHot(gt_labels)
+#     valid_gt_indices = np.any(W_gt!=0, axis=1)
+
+#     valid_match_indices = np.logical_and(valid_pred_indices, valid_gt_indices)
+#     W_pred = W_pred[valid_match_indices, :]
+#     W_gt = W_gt[valid_match_indices, :]
+
+
+#     dot = np.sum(np.expand_dims(W_pred, axis=2) * np.expand_dims(W_gt, axis=1),
+#                  axis=0)  # K'xK
+#     denominator = np.expand_dims(np.sum(W_pred, axis=0),
+#                                  axis=1) + np.expand_dims(np.sum(W_gt, axis=0),
+#                                                           axis=0) - dot
+#     cost = dot / np.maximum(denominator, np.finfo(np.float64).eps)  # K'xK
+
+#     pred_ind, gt_ind = solve_dense(-cost)  # want max solution
+
+#     for index in range(len(pred_ind)):
+#         gt_indices_i = gt_labels == gt_ind[index]
+#         pred_indices_i = query_labels == pred_ind[index]
+#         intersection = np.count_nonzero(np.logical_and(gt_indices_i, pred_indices_i))
+        
+#         #if intersection == 0:
+#         #    gt_ind[index] = -1
+
+#         print(gt_ind[index], np.count_nonzero(pred_indices_i), np.count_nonzero(gt_indices_i))
+
+#     # matching = np.zeros(max(0, pred_ind.size), dtype=np.int32) - 1
+#     # if len(pred_ind) > 0:
+#     #     matching[pred_ind] = gt_ind
+
+#     unique_target = np.unique(gt_labels)
+#     unique_pred = np.unique(query_labels)
+#     return pred_ind, gt_ind, unique_target, unique_pred
 
 def match(target, pred_labels):
+    # W_pred = getOneHot(pred_labels)
+    # valid_pred_indices = np.any(W_pred!=0, axis=1)
+    # W_gt = getOneHot(target)
+    # valid_gt_indices = np.any(W_gt!=0, axis=1)
+
+    # valid_match_indices = np.logical_and(valid_pred_indices, valid_gt_indices)
+    # cluster_ids_one_hot = torch.from_numpy(W_pred[valid_match_indices, :])
+    # labels_one_hot = torch.from_numpy(W_gt[valid_match_indices, :])
+
     labels_one_hot = to_one_hot(target)
     cluster_ids_one_hot = to_one_hot(pred_labels)
 
@@ -374,7 +429,6 @@ def match(target, pred_labels):
     unique_target = np.unique(target)
     unique_pred = np.unique(pred_labels)
     return rids, cids, unique_target, unique_pred
-
 
 def visualize_weighted_points(points, w, normals=None, viz=False):
     N = points.shape[0]

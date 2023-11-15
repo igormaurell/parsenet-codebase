@@ -124,12 +124,12 @@ class FittingModule:
         nu, nv = uniform_knot_bspline(20, 20, 3, 3, 30)
         self.nu = torch.from_numpy(nu.astype(np.float32))
         self.nv = torch.from_numpy(nv.astype(np.float32))
-        self.open_control_decoder = initialize_open_spline_model(
-            self.open_splinenet_path, 0
-        )
-        self.closed_control_decoder = initialize_closed_spline_model(
-            self.closed_splinenet_path, 1
-        )
+        # self.open_control_decoder = initialize_open_spline_model(
+        #     self.open_splinenet_path, 0
+        # )
+        # self.closed_control_decoder = initialize_closed_spline_model(
+        #     self.closed_splinenet_path, 1
+        # )
 
     def forward_pass_open_spline(self, points, ids, weights, if_optimize=False):
         points = torch.unsqueeze(points, 0)
